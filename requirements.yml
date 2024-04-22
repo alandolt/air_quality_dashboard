@@ -1,0 +1,12 @@
+name: air_quality_dashboard
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python
+  - numpy
+  - pandas
+  - dash
+  - plotly
+  - ipykernel
+  - pip
