@@ -8,7 +8,7 @@ As this repository is part of a group project in an university course dedicated 
 To install the required packages, clone this repository. Then create a new environment in Conda / Mamba by running the following command: 
     
 ```
-conda create --name myenv --file requirements.yml
+conda env create --file requirements.yml 
 ```
 
 Activate the environment by running: 

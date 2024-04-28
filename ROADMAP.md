@@ -7,11 +7,11 @@
 - [x] Create a requirement file + install instructions
 
 ## 0.0.1 (Assignment W9)
- - [ ] Import data from WHO
+ - [x] Import data from WHO
  - [ ] Import data from local resources (build if required a small web scraper) 
- - [ ] Create a base to then later be able to work with dash or plotly 
+ - [x] Create a base to then later be able to work with dash or plotly 
  - [ ] Give user information about the dataset (static output)
- - [ ] Format dataset correctly (e.g. date format, etc.)
+ - [x] Format dataset correctly (e.g. date format, etc.)
 
 ## 0.0.2 (Assignment W10)
  - [ ] Allow user to input one or more countries, as well as timespan

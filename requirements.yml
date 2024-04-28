@@ -8,5 +8,6 @@ dependencies:
   - pandas
   - dash
   - plotly
-  - ipykernel
-  - pip
+  - ipykernel # only required for debugging
+  - openpyxl
+  - pip # only required for debugging
