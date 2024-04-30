@@ -1,8 +1,11 @@
 from dash import Dash, html, dcc
 from air_quality_dashboard import WHOData
+from air_quality_dashboard import LocalData
 
 app = Dash(__name__)
 whodata = WHOData.WHOData()
+localdata = LocalData.LocalData()
+
 
 def main():
 
@@ -27,3 +30,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
