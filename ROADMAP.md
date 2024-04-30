@@ -8,7 +8,7 @@
 
 ## 0.0.1 (Assignment W9)
  - [x] Import data from WHO
- - [ ] Import data from local resources (build if required a small web scraper) 
+ - [x] Import data from local resources (build if required a small web scraper) 
  - [x] Create a base to then later be able to work with dash or plotly 
  - [ ] Give user information about the dataset (static output)
  - [x] Format dataset correctly (e.g. date format, etc.)
