@@ -21,7 +21,6 @@ class LocalData:
         self.data_location = os.path.join(
             "data", f"local_air_quality_data_{data_source_name}.xz"
         )
-        self.df = None
         self.load_local_air_quality_data()
 
     def load_local_air_quality_data(self):
@@ -33,9 +32,11 @@ class LocalData:
             if os.path.exists(self.data_location):
                 self.df = pd.read_pickle(self.data_location)
             else:
-                self.update_local_air_quality_data()
+                self.df = None
+
+            self.update_local_air_quality_data()
         except Exception as e:
-            print(f"Failed to load local air quality data: {e}")
+            print(f"Failed to load air quality data: {e}")
 
     def update_local_air_quality_data(self):
         """
@@ -44,7 +45,6 @@ class LocalData:
         the data is updated hourly on the website, but there is no archive,
         so we create our own here by saving the data in a pickle file.
         """
-
         # get the local website
         local_website = requests.get(self.air_quality_data_url)
 
@@ -89,8 +89,8 @@ class LocalData:
         if self.df is None:
             self.df = df
         else:
-            if date not in self.df["timestamp"].unique().values:
-                self.df = pd.concat(self.df, df)
+            if date not in self.df["timestamp"].unique():
+                self.df = pd.concat([self.df, df])
 
         self.df.to_pickle(self.data_location, compression="xz")
 
