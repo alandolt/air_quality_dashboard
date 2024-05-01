@@ -10,7 +10,7 @@
  - [x] Import data from WHO
  - [x] Import data from local resources (build if required a small web scraper) 
  - [x] Create a base to then later be able to work with dash or plotly 
- - [ ] Give user information about the dataset (static output)
+ - [x] Give user information about the dataset (static output)
  - [x] Format dataset correctly (e.g. date format, etc.)
 
 ## 0.0.2 (Assignment W10)

@@ -14,7 +14,7 @@ conda env create --file requirements.yml
 Activate the environment by running: 
 
 ```
-conda activate myenv
+conda activate air_quality_dashboard
 ```
 
 ## Usage
@@ -24,7 +24,13 @@ To run the dashboard locally, run the following command in the terminal:
 ```
 python main.py
 ```
- 
+
+The dashboard will then be available at `http://127.0.0.1:8080/` in your browser.
+
+## Progress
+- *0.0.1*: Data can be imported from WHO, as well as from a local source (Switzerland -> NABEL database). Summary statistics, like how many entries are present, when the NABEL database got last updated, etc. are displayed in the dashboard.
+
+
 ## Contributors: 
 - [Anmol Ratan](https://www.linkedin.com/in/anmol-ratan-8a801b166/)
 - [Alex Landolt](https://github.com/alandolt/)

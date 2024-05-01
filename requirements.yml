@@ -10,4 +10,6 @@ dependencies:
   - plotly
   - ipykernel # only required for debugging
   - openpyxl
+  - beautifulsoup4
+  - lxml
   - pip # only required for debugging
