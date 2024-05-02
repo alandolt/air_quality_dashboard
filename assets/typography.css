@@ -1,0 +1,4 @@
+/* small hack to disable the case filter in the data tables */
+.dash-filter--case {
+    display: none !important;
+}

@@ -82,6 +82,10 @@ class LocalData:
         date = pd.to_datetime(date.lstrip("Date from: "))
         df["timestamp"] = date
 
+        df = df.loc[
+            df["Type of site"] != "Ambient air quality standard [µg/m³]"
+        ]  # remove the critical values
+
         # if no previous data exist, save the new data directly in the class,
         # otherwise append the new data to the existing data, but first check if the
         # data is not already in the dataframe by checking if the timestamp already

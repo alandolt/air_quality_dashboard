@@ -6,12 +6,13 @@ import os
 
 default_data_url = r"https://cdn.who.int/media/docs/default-source/air-pollution-documents/air-quality-and-health/who_ambient_air_quality_database_version_2024_(v6.1).xlsx"
 
-class WHOData(): 
 
-    def __init__(self, air_quality_data_url:str = default_data_url) -> None:
-       self.air_quality_data_url = air_quality_data_url
-       self.df = self.get_who_air_quality_data()
-       self.calculate_statistics()
+class WHOData:
+
+    def __init__(self, air_quality_data_url: str = default_data_url) -> None:
+        self.air_quality_data_url = air_quality_data_url
+        self.df = self.get_who_air_quality_data()
+        self.calculate_statistics()
 
     def download_who_air_quality_data(self):
         """
@@ -26,7 +27,9 @@ class WHOData():
                 io.BytesIO(air_quality_data.content), "Update 2024 (V6.1)"
             )
         else:
-            print(f"Failed to download data. Status code: {air_quality_data.status_code}")
+            print(
+                f"Failed to download data. Status code: {air_quality_data.status_code}"
+            )
             raise Exception("Failed to download data")
 
         # set the correct datatypes
@@ -36,9 +39,9 @@ class WHOData():
         )
         pd_air_quality_data["iso3"] = pd_air_quality_data["iso3"].astype(str)
         pd_air_quality_data["city"] = pd_air_quality_data["city"].astype(str)
-        pd_air_quality_data["country_name"] = pd_air_quality_data["country_name"].astype(
-            str
-        )
+        pd_air_quality_data["country_name"] = pd_air_quality_data[
+            "country_name"
+        ].astype(str)
         pd_air_quality_data["version"] = pd_air_quality_data["version"].astype(str)
         pd_air_quality_data = pd_air_quality_data.dropna(
             subset=["year"]
@@ -46,12 +49,15 @@ class WHOData():
         pd_air_quality_data["year"] = pd.to_datetime(
             pd_air_quality_data["year"], format="%Y"
         )
+        pd_air_quality_data["year_int"] = pd_air_quality_data["year"].dt.strftime(
+            "%Y"
+        )  # have a year as integer for the data table
+        pd_air_quality_data["year_int"] = pd_air_quality_data["year_int"].astype(float)
         # save the data
         pd_air_quality_data.to_pickle(
             os.path.join("data", "air_quality_data.xz"), compression="xz"
         )
         return pd_air_quality_data
-
 
     def load_who_air_quality_data(self):
         """
@@ -61,7 +67,6 @@ class WHOData():
         pd.DataFrame: the WHO air quality data
         """
         return pd.read_pickle(os.path.join("data", "air_quality_data.xz"))
-
 
     def get_who_air_quality_data(self):
         """
@@ -74,7 +79,6 @@ class WHOData():
             return self.load_who_air_quality_data()
         except FileNotFoundError:
             return self.download_who_air_quality_data()
-
 
     def calculate_statistics(self):
         self.years = self.df["year"].unique().year
