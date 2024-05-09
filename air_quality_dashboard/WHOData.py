@@ -5,6 +5,7 @@ import io
 import os
 
 default_data_url = r"https://cdn.who.int/media/docs/default-source/air-pollution-documents/air-quality-and-health/who_ambient_air_quality_database_version_2024_(v6.1).xlsx"
+print("This is a test")
 
 
 class WHOData:
