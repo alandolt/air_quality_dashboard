@@ -127,6 +127,7 @@ def layout_Whodatastatistics():
     return html.Div(
         [
             html.H1("WHOdata Statistics"),
+            # Selection with buttons for different concentrations for histogram plotting
             dcc.RadioItems(
                 id="histogram-selector",
                 options=[
@@ -141,6 +142,20 @@ def layout_Whodatastatistics():
                 labelStyle={"display": "inline-block"},
             ),
             dcc.Graph(id="histogram-graph"),
+            # Selection with dropdown menue for different concentrations for graph plotting
+            dcc.Dropdown(
+                id="graph-selector",
+                options=[
+                    {"label": "PM10", "value": "pm10_concentration"},
+                    {"label": "PM25", "value": "pm25_concentration"},
+                    {"label": "NO2", "value": "no2_concentration"},
+                    {"label": "PM10 Coverage", "value": "pm10_tempcov"},
+                    {"label": "PM25 Coverage", "value": "pm25_tempcov"},
+                    {"label": "NO2 Coverage", "value": "no2_tempcov"},
+                ],
+                value="pm10_concentration",
+            ),
+            dcc.Graph(id="graph"),
         ]
     )
 
@@ -311,6 +326,74 @@ def update_histogram(selected_value):
         df_pivot, x=df_pivot.index, y=df_pivot[selected_value], title=title
     )
 
+    return fig
+
+
+def update_graph(selected_value):
+    if selected_value == "pm10_concentration":
+        title = "mean PM10 value over the years"
+    elif selected_value == "pm25_concentration":
+        title = "mean PM25 value over the years"
+    elif selected_value == "no2_concentration":
+        title = "mean NO2 value over the years"
+    elif selected_value == "pm10_tempcov":
+        title = "mean PM10 Coverage over the years"
+    elif selected_value == "pm25_tempcov":
+        title = "mean PM25 Coverage over the years"
+    else:
+        title = "mean NO2 Coverage over the years"
+
+    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.replace(
+        ",", " "
+    )
+    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.split().str[0]
+
+    df_pivot = whodata.df.pivot_table(
+        index="type_of_stations", values=selected_value, aggfunc="mean"
+    )
+    fig = px.histogram(
+        df_pivot,
+        x=df_pivot.index,
+        y=df_pivot[selected_value],
+        labels={"x": "Type of Station", "y": selected_value},
+        title=title,
+    )
+
+    return fig
+
+
+# Make maybe 2 different dropdown menu to chose country and concentration to make then a graph
+# https://dash-example-index.herokuapp.com/dynamic-callback
+
+
+@callback(
+    Output(component_id="graph", component_property="figure"),
+    Input(component_id="graph-selector", component_property="value"),
+)
+def update_histogram(selected_value):
+    if selected_value == "pm10_concentration":
+        title = "mean PM10 value over the years"
+    elif selected_value == "pm25_concentration":
+        title = "mean PM25 value over the years"
+    elif selected_value == "no2_concentration":
+        title = "mean NO2 value over the years"
+    elif selected_value == "pm10_tempcov":
+        title = "mean PM10 Coverage over the years"
+    elif selected_value == "pm25_tempcov":
+        title = "mean PM25 Coverage over the years"
+    else:
+        title = "mean NO2 Coverage over the years"
+
+    df_pivot = whodata.df.pivot_table(
+        index="year", values=selected_value, aggfunc="mean"
+    )
+
+    fig = px.line(
+        x=df_pivot.index,
+        y=df_pivot[selected_value],
+        labels={"x": "year", "y": selected_value},
+        title=title,
+    )
     return fig
 
 
