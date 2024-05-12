@@ -83,6 +83,7 @@ class WHOData:
             return self.download_who_air_quality_data()
 
     def calculate_statistics(self):
-        self.years = self.df["year"].unique().year
+        self.years = self.df["year"].unique()
         self.years.sort()
         self.n_countries = self.df["country_name"].nunique()
+        

@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc, dash_table, Input, Output, callback
 from air_quality_dashboard import WHOData
 from air_quality_dashboard import LocalData
+import plotly.express as px
 
 ITEMS_PER_PAGE = 10  # set the number of elements per page
 
@@ -8,19 +9,51 @@ app = Dash(__name__, title="Air Quality Dashboard")
 whodata = WHOData.WHOData()
 localdata = LocalData.LocalData()
 
+# print("Debug: ")
+# print(whodata.df.head())
+
 
 def main():
 
-    print("Debug: ")
-    print(whodata.df.head())
-
     app.layout = html.Div(
+        [
+            html.Div(
+                [
+                    dcc.Link("Home", href="/"),
+                    html.Span(" | "),
+                    dcc.Link("Whodata statistics", href="/Whodata_statistics"),
+                    html.Span(" | "),
+                    dcc.Link("Localdata statistics", href="/Localdata_statistics"),
+                ],
+                style={"marginBottom": 10},
+            ),
+            dcc.Location(id="url", refresh=False),
+            html.Div(id="page-content"),
+        ]
+    )
+
+    @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
+    def display_page(pathname):
+        if pathname == "/":
+            return layout_home()
+        elif pathname == "/Whodata_statistics":
+            return layout_Whodatastatistics()
+        elif pathname == "/Localdata_statistics":
+            return layout_Localdatastatistics()
+        else:
+            return "404 Page Not Found"
+
+    app.run_server(debug=True, port=8081)
+
+
+def layout_home():
+    return html.Div(
         [
             html.H1("Air Quality Dashboard"),
             html.P(
                 "This dashboard shows air quality data from the WHO, as well as the NABEL database from Switzerland."
             ),
-            html.H2("General Statistics"),
+            html.H2("General Data"),
             html.H3("WHO Data"),
             html.P(
                 f"Data from the following year is available: : {whodata.years[0]} - {whodata.years[-1]}"
@@ -28,12 +61,12 @@ def main():
             html.P(f"N° countries: {whodata.n_countries}"),
             html.H4("Data Table"),
             html.P(
-                "This table shows the WHO data. Please use the =, >, <, >=, <=, != operators for filtering when using numbers. The Country column can be filtered directly. "
+                "This table shows the WHO data. Please use the =, >, <, >=, <=, != operators for filtering when using numbers. For the Country and type of station column the '=' operator has to be put in front of the word ('=Switzerland')"
             ),
             dash_table.DataTable(  # initalize the dash data table
                 id="who_data",
                 columns=[
-                    {"id": "country_name", "name": "Country"},
+                    {"id": "country_name", "name": "Country", "type": "text"},
                     {"id": "year_int", "name": "Year"},
                     {"id": "city", "name": "City"},
                     {"id": "pm10_concentration", "name": "PM10"},
@@ -42,7 +75,11 @@ def main():
                     {"id": "pm25_tempcov", "name": "PM25 Coverage"},
                     {"id": "no2_concentration", "name": "NO2"},
                     {"id": "no2_coverage", "name": "NO2 Coverage"},
-                    {"id": "type_of_stations", "name": "Type of Station"},
+                    {
+                        "id": "type_of_stations",
+                        "name": "Type of Station",
+                        "type": "text",
+                    },
                 ],
                 page_current=0,
                 page_size=ITEMS_PER_PAGE,  # set the number of elements per page
@@ -81,7 +118,39 @@ def main():
             ),
         ]
     )
-    app.run(debug=True, port=8080)
+
+
+# Statistics page layout, for histogram graph. For the next task also graph would be nice.  Also add a third page with local_data
+
+
+def layout_Whodatastatistics():
+    return html.Div(
+        [
+            html.H1("WHOdata Statistics"),
+            dcc.RadioItems(
+                id="histogram-selector",
+                options=[
+                    {"label": "PM10", "value": "pm10_concentration"},
+                    {"label": "PM25", "value": "pm25_concentration"},
+                    {"label": "NO2", "value": "no2_concentration"},
+                    {"label": "PM10 Coverage", "value": "pm10_tempcov"},
+                    {"label": "PM25 Coverage", "value": "pm25_tempcov"},
+                    {"label": "NO2 Coverage", "value": "no2_tempcov"},
+                ],
+                value="pm10_concentration",
+                labelStyle={"display": "inline-block"},
+            ),
+            dcc.Graph(id="histogram-graph"),
+        ]
+    )
+
+
+def layout_Localdatastatistics():
+    return html.Div(
+        [
+            html.H1("Localdata Statistics"),
+        ]
+    )
 
 
 # Operators translation table from the internal dash frontend syntax to the pandas syntax
@@ -170,7 +239,7 @@ def update_table_switzerland(page_current, page_size, sort_by, filter):
 
 
 # same function as above, but for the WHO data
-@callback(
+@app.callback(
     Output("who_data", "data"),
     Input("who_data", "page_current"),
     Input("who_data", "page_size"),
@@ -187,14 +256,16 @@ def update_table_whodata(page_current, page_size, sort_by, filter):
         col_name, operator, filter_value = split_filter_part(
             filter_part
         )  # split the filter part
-        if operator in ("eq", "ne", "lt", "le", "gt", "ge"):
+
+        if operator == "contains":
+            if col_name in ["Country", "Type of Station"]:
+                # Workaround to avoid error when filtering on non-string columns. Not nice, should be fixed in the future.
+                dff = dff.loc[dff[col_name].str.contains(filter_value, case=False)]
+
+        elif operator in ("eq", "ne", "lt", "le", "gt", "ge"):
             # Apply comparison operators to filter the DataFrame
             dff = dff.loc[getattr(dff[col_name], operator)(filter_value)]
-        elif operator == "contains":
-            if col_name in [
-                "Country"
-            ]:  # Workaround to avoid error when filtering on non-string columns. Not nice, should be fixed in the future.
-                dff = dff.loc[dff[col_name].str.contains(filter_value, case=False)]
+
     if len(sort_by):  # Code to sort the data based on the chosen column
         dff = dff.sort_values(
             [col["column_id"] for col in sort_by],
@@ -207,6 +278,40 @@ def update_table_whodata(page_current, page_size, sort_by, filter):
     return dff.iloc[page * size : (page + 1) * size].to_dict(
         "records"
     )  # only hand the data of the current page to the webbrowser frontend
+
+
+# Statitics, represent with histograms and graphs
+@callback(
+    Output(component_id="histogram-graph", component_property="figure"),
+    Input(component_id="histogram-selector", component_property="value"),
+)
+def update_histogram(selected_value):
+    if selected_value == "pm10_concentration":
+        title = "mean PM10 value over the years"
+    elif selected_value == "pm25_concentration":
+        title = "mean PM25 value over the years"
+    elif selected_value == "no2_concentration":
+        title = "mean NO2 value over the years"
+    elif selected_value == "pm10_tempcov":
+        title = "mean PM10 Coverage over the years"
+    elif selected_value == "pm25_tempcov":
+        title = "mean PM25 Coverage over the years"
+    else:
+        title = "mean NO2 Coverage over the years"
+
+    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.replace(
+        ",", " "
+    )
+    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.split().str[0]
+
+    df_pivot = whodata.df.pivot_table(
+        index="type_of_stations", values=str(selected_value), aggfunc="mean"
+    )
+    fig = px.histogram(
+        df_pivot, x=df_pivot.index, y=df_pivot[selected_value], title=title
+    )
+
+    return fig
 
 
 if __name__ == "__main__":
