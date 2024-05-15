@@ -29,7 +29,7 @@ The dashboard will then be available at `http://127.0.0.1:8080/` in your browser
 
 ## Progress
 - *0.0.1*: Data can be imported from WHO, as well as from a local source (Switzerland -> NABEL database). Summary statistics, like how many entries are present, when the NABEL database got last updated, etc. are displayed in the dashboard.
-
+- *0.0.2*: Add some interactive filtering for the user to select countries and time spans to select PM10, PM25, and NO2 values. Code refactoring, bug fixing (see commit messages for details) and linting.
 
 ## Contributors: 
 - [Anmol Ratan](https://www.linkedin.com/in/anmol-ratan-8a801b166/)

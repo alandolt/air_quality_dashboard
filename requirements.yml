@@ -13,3 +13,4 @@ dependencies:
   - beautifulsoup4
   - lxml
   - pip # only required for debugging
+  - pylint # only required for debugging

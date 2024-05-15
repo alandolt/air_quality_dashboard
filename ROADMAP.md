@@ -14,9 +14,9 @@
  - [x] Format dataset correctly (e.g. date format, etc.)
 
 ## 0.0.2 (Assignment W10)
- - [ ] Allow user to input one or more countries, as well as timespan
- - [ ] Do said above  about the maximum values of pm 10, pm 25 and NO<sub>2</sub> in the selected countries
- - [ ] Do said above interactively, using a map input in dash, or a dropdown menu
+ - [x] Allow user to input one or more countries, as well as timespan
+ - [x] Do said above  about the maximum values of pm 10, pm 25 and NO<sub>2</sub> in the selected countries
+ - [-] Do said above interactively, using a map input in dash, or a dropdown menu
 
 ## 0.0.3 (Assignment W11)
 - [ ] Provide visualisation about the trends of air pollution across cities, countries and measures. 
