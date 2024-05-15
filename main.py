@@ -5,7 +5,7 @@ import plotly.express as px
 
 ITEMS_PER_PAGE = 10  # set the number of elements per page
 
-app = Dash(__name__, title="Air Quality Dashboard")
+app = Dash(__name__, title="Air Quality Dashboard", suppress_callback_exceptions=True)
 whodata = WHOData.WHOData()
 localdata = LocalData.LocalData()
 
@@ -124,9 +124,81 @@ def layout_home():
 
 
 def layout_Whodatastatistics():
+
+    # Filter the countries and years for the dropdown menu
+    filtered_countries = whodata.df.drop_duplicates(subset="country_name")
+    filtered_years = whodata.df.drop_duplicates(subset="year")
+
+    dropdown_style = {"width": "200px"}
+
     return html.Div(
         [
             html.H1("WHOdata Statistics"),
+            # Dropdown menus to chose different countries and their corresponding max_value in a certain timespan
+            # Dropdown menus for years
+            html.Div(
+                [
+                    html.H5("Year 1"),
+                    dcc.Dropdown(
+                        id="year-1",
+                        options=sorted(filtered_years["year"]),
+                        value=filtered_years["year"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Year 2"),
+                    dcc.Dropdown(
+                        id="year-2",
+                        options=sorted(filtered_years["year"]),
+                        value=filtered_years["year"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            # Dropdown menu for countrys
+            html.Div(
+                [
+                    html.H5("Country 1"),
+                    dcc.Dropdown(
+                        id="country-1",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Country 2"),
+                    dcc.Dropdown(
+                        id="country-2",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Country 3"),
+                    dcc.Dropdown(
+                        id="country-3",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            # Put a histogramm for the max values
+            dcc.Graph(id="histogram-graph"),
             # Selection with buttons for different concentrations for histogram plotting
             dcc.RadioItems(
                 id="histogram-selector",
@@ -142,7 +214,7 @@ def layout_Whodatastatistics():
                 labelStyle={"display": "inline-block"},
             ),
             dcc.Graph(id="histogram-graph"),
-            # Selection with dropdown menue for different concentrations for graph plotting
+            # Selection with dropdown menu for different concentrations for graph plotting
             dcc.Dropdown(
                 id="graph-selector",
                 options=[
