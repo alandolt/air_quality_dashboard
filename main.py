@@ -432,6 +432,7 @@ def update_histogram_max(
         y=[max_country_1, max_country_2, max_country_3],
         title=title,
         labels={"x": "Country", "y": selected_value},
+        color_discrete_sequence=["orange"],
     )
 
     return fig
