@@ -1,13 +1,13 @@
 from dash import Dash, html, dcc, dash_table, Input, Output, callback
-from air_quality_dashboard import WHOData
-from air_quality_dashboard import LocalData
+from air_quality_dashboard import who_data
+from air_quality_dashboard import local_data
 import plotly.express as px
 
 ITEMS_PER_PAGE = 10  # set the number of elements per page
 
 app = Dash(__name__, title="Air Quality Dashboard", suppress_callback_exceptions=True)
-whodata = WHOData.WHOData()
-localdata = LocalData.LocalData()
+whodata = who_data.WHOData()
+localdata = local_data.LocalData()
 
 # print("Debug: ")
 # print(whodata.df.head())
@@ -51,17 +51,20 @@ def layout_home():
         [
             html.H1("Air Quality Dashboard"),
             html.P(
-                "This dashboard shows air quality data from the WHO, as well as the NABEL database from Switzerland."
+                "This dashboard shows air quality data from the WHO, as well as the \
+                NABEL database from Switzerland."
             ),
             html.H2("General Data"),
             html.H3("WHO Data"),
             html.P(
-                f"Data from the following year is available: : {whodata.years[0]} - {whodata.years[-1]}"
+                f"Data from the following year is available: :  \
+                    {whodata.years[0]} - {whodata.years[-1]}"
             ),
             html.P(f"N° countries: {whodata.n_countries}"),
             html.H4("Data Table"),
             html.P(
-                "This table shows the WHO data. Please use the =, >, <, >=, <=, != operators for filtering when using numbers. For the Country and type of station column the '=' operator has to be put in front of the word ('=Switzerland')"
+                "This table shows the WHO data. Please use the =, >, <, >=, <=, != operators for filtering when using numbers.  \
+                    For the Country and type of station column the '=' operator has to be put in front of the word ('=Switzerland')"
             ),
             dash_table.DataTable(  # initalize the dash data table
                 id="who_data",
@@ -95,7 +98,9 @@ def layout_home():
             html.P(f"Data last updated: {localdata.max_date()}"),
             html.H4("Data Table"),
             html.P(
-                "This table shows the local data from Switzerland. Please use the =, >, <, >=, <=, != operators for filtering when using numbers. The Type of site, and the Location column can be filtered directly. "
+                "This table shows the local data from Switzerland.  \
+                    Please use the =, >, <, >=, <=, != operators for filtering when using numbers.  \
+                        The Type of site, and the Location column can be filtered directly. "
             ),
             dash_table.DataTable(  # initalize the dash data table
                 id="local_data_switzerland",
@@ -120,7 +125,8 @@ def layout_home():
     )
 
 
-# Statistics page layout, for histogram graph. For the next task also graph would be nice.  Also add a third page with local_data
+# Statistics page layout, for histogram graph.
+# For the next task also graph would be nice.  Also add a third page with local_data
 
 
 def layout_Whodatastatistics():
@@ -312,9 +318,9 @@ def split_filter_part(filter_part):
     Input("local_data_switzerland", "sort_by"),
     Input("local_data_switzerland", "filter_query"),
 )
-def update_table_switzerland(page_current, page_size, sort_by, filter):
+def update_table_switzerland(page_current, page_size, sort_by, filter_arg):
     # Split the filter query into individual filtering expressions
-    filtering_expressions = filter.split(" && ")
+    filtering_expressions = filter_arg.split(" && ")
     dff = localdata.df
     # Apply each filtering expression to the DataFrame
     for filter_part in filtering_expressions:

@@ -1,17 +1,20 @@
-import pandas as pd
-import numpy as np
-import requests
+"""
+Module containing WHOData class to load and update the WHO air quality data.
+"""
 import io
 import os
+import pandas as pd
+import requests
 
-default_data_url = r"https://cdn.who.int/media/docs/default-source/air-pollution-documents/air-quality-and-health/who_ambient_air_quality_database_version_2024_(v6.1).xlsx"
-print("This is a test")
-print("This is a second test")
+
+DEFAULT_DATA_URL = r"https://cdn.who.int/media/docs/default-source/air-pollution-documents/air-quality-and-health/who_ambient_air_quality_database_version_2024_(v6.1).xlsx"
 
 
 class WHOData:
-
-    def __init__(self, air_quality_data_url: str = default_data_url) -> None:
+    """
+    Class to load and update the WHO air quality data.
+    """
+    def __init__(self, air_quality_data_url: str = DEFAULT_DATA_URL) -> None:
         self.air_quality_data_url = air_quality_data_url
         self.df = self.get_who_air_quality_data()
         self.calculate_statistics()
@@ -23,7 +26,7 @@ class WHOData:
         Returns:
         pd.DataFrame: the WHO air quality data
         """
-        air_quality_data = requests.get(self.air_quality_data_url)
+        air_quality_data = requests.get(self.air_quality_data_url, timeout=15)
         if air_quality_data.status_code == 200:
             pd_air_quality_data = pd.read_excel(
                 io.BytesIO(air_quality_data.content), "Update 2024 (V6.1)"
@@ -72,7 +75,8 @@ class WHOData:
 
     def get_who_air_quality_data(self):
         """
-        Downloads the WHO air quality data if it does not exist, otherwise loads it from the pickle file.
+        Downloads the WHO air quality data if it does not exist, \
+            otherwise loads it from the pickle file.
 
         Returns:
         pd.DataFrame: the WHO air quality data
@@ -83,6 +87,12 @@ class WHOData:
             return self.download_who_air_quality_data()
 
     def calculate_statistics(self):
+        """
+        Calculates some statistics for the WHO air quality data.
+        
+        Returns:
+        None
+        """
         self.years = self.df["year"].unique().tolist()
         self.years.sort()
         self.n_countries = self.df["country_name"].nunique()
