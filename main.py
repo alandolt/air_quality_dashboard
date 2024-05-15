@@ -5,7 +5,7 @@ import plotly.express as px
 
 ITEMS_PER_PAGE = 10  # set the number of elements per page
 
-app = Dash(__name__, title="Air Quality Dashboard")
+app = Dash(__name__, title="Air Quality Dashboard", suppress_callback_exceptions=True)
 whodata = WHOData.WHOData()
 localdata = LocalData.LocalData()
 
@@ -124,10 +124,100 @@ def layout_home():
 
 
 def layout_Whodatastatistics():
+
+    # Filter the countries and years for the dropdown menu
+    filtered_countries = whodata.df.drop_duplicates(subset="country_name")
+    filtered_years = whodata.df.drop_duplicates(subset="year")
+
+    dropdown_style = {"width": "200px"}
+
     return html.Div(
         [
             html.H1("WHOdata Statistics"),
+            # Dropdown menus to chose different countries and their corresponding max_value in a certain timespan
+            # Dropdown menus for years
+            html.H2(
+                "See max values in function of the country, timespan and concentration"
+            ),
+            html.Div(
+                [
+                    html.H5("Year 1"),
+                    dcc.Dropdown(
+                        id="year-1",
+                        options=sorted(filtered_years["year"]),
+                        value=filtered_years["year"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Year 2"),
+                    dcc.Dropdown(
+                        id="year-2",
+                        options=sorted(filtered_years["year"]),
+                        value=filtered_years["year"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            # Dropdown menu for countrys
+            html.Div(
+                [
+                    html.H5("Country 1"),
+                    dcc.Dropdown(
+                        id="country-1",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Country 2"),
+                    dcc.Dropdown(
+                        id="country-2",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Div(
+                [
+                    html.H5("Country 3"),
+                    dcc.Dropdown(
+                        id="country-3",
+                        options=sorted(filtered_countries["country_name"]),
+                        value=filtered_countries["country_name"].iloc[0],
+                        style=dropdown_style,
+                    ),
+                ],
+                style={"display": "inline-block"},
+            ),
+            html.Br(),  # don't work, no space is made
+            dcc.RadioItems(
+                id="histogram-max-selector",
+                options=[
+                    {"label": "PM10", "value": "pm10_concentration"},
+                    {"label": "PM25", "value": "pm25_concentration"},
+                    {"label": "NO2", "value": "no2_concentration"},
+                    {"label": "PM10 Coverage", "value": "pm10_tempcov"},
+                    {"label": "PM25 Coverage", "value": "pm25_tempcov"},
+                    {"label": "NO2 Coverage", "value": "no2_tempcov"},
+                ],
+                value="pm10_concentration",
+                labelStyle={"display": "inline-block"},
+            ),
+            # Put a histogramm for the max values
+            dcc.Graph(id="histogram-max"),
             # Selection with buttons for different concentrations for histogram plotting
+            html.H2("See mean values in function of the region and concentration"),
             dcc.RadioItems(
                 id="histogram-selector",
                 options=[
@@ -142,7 +232,8 @@ def layout_Whodatastatistics():
                 labelStyle={"display": "inline-block"},
             ),
             dcc.Graph(id="histogram-graph"),
-            # Selection with dropdown menue for different concentrations for graph plotting
+            html.H2("See mean concentration of all countries over the years"),
+            # Selection with dropdown menu for different concentrations for graph plotting
             dcc.Dropdown(
                 id="graph-selector",
                 options=[
@@ -296,40 +387,58 @@ def update_table_whodata(page_current, page_size, sort_by, filter):
 
 
 # Statitics, represent with histograms and graphs
+
+
+# Histogramm which presents the max values in function of the country
 @callback(
-    Output(component_id="histogram-graph", component_property="figure"),
-    Input(component_id="histogram-selector", component_property="value"),
+    Output(component_id="histogram-max", component_property="figure"),
+    Input(component_id="histogram-max-selector", component_property="value"),
+    Input(component_id="country-1", component_property="value"),
+    Input(component_id="country-2", component_property="value"),
+    Input(component_id="country-3", component_property="value"),
+    Input(component_id="year-1", component_property="value"),
+    Input(component_id="year-2", component_property="value"),
 )
-def update_histogram(selected_value):
+def update_histogram_max(
+    selected_value, country_1, country_2, country_3, year_1, year_2
+):
     if selected_value == "pm10_concentration":
-        title = "mean PM10 value over the years"
+        title = "PM10 Concentration"
     elif selected_value == "pm25_concentration":
-        title = "mean PM25 value over the years"
+        title = "PM25 Concentration"
     elif selected_value == "no2_concentration":
-        title = "mean NO2 value over the years"
+        title = "NO2 Concentration"
     elif selected_value == "pm10_tempcov":
-        title = "mean PM10 Coverage over the years"
+        title = "PM10 Coverage"
     elif selected_value == "pm25_tempcov":
-        title = "mean PM25 Coverage over the years"
+        title = "PM25 Coverage"
     else:
-        title = "mean NO2 Coverage over the years"
+        title = "NO2 Coverage"
 
-    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.replace(
-        ",", " "
-    )
-    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.split().str[0]
+    df = whodata.df[(whodata.df["year"] <= year_1) & (whodata.df["year"] <= year_2)]
 
-    df_pivot = whodata.df.pivot_table(
-        index="type_of_stations", values=str(selected_value), aggfunc="mean"
-    )
+    max_country_1 = df[df["country_name"] == country_1][selected_value].max()
+    max_country_2 = df[df["country_name"] == country_2][selected_value].max()
+    max_country_3 = df[df["country_name"] == country_3][selected_value].max()
+
     fig = px.histogram(
-        df_pivot, x=df_pivot.index, y=df_pivot[selected_value], title=title
+        x=[country_1, country_2, country_3],
+        y=[max_country_1, max_country_2, max_country_3],
+        title=title,
+        labels={"x": "Country", "y": selected_value},
     )
 
     return fig
 
 
-def update_graph(selected_value):
+# Histogramm which presents different values in function of the region
+
+
+@callback(
+    Output(component_id="histogram-graph", component_property="figure"),
+    Input(component_id="histogram-selector", component_property="value"),
+)
+def update_histogramm(selected_value):
     if selected_value == "pm10_concentration":
         title = "mean PM10 value over the years"
     elif selected_value == "pm25_concentration":
@@ -362,15 +471,11 @@ def update_graph(selected_value):
     return fig
 
 
-# Make maybe 2 different dropdown menu to chose country and concentration to make then a graph
-# https://dash-example-index.herokuapp.com/dynamic-callback
-
-
 @callback(
     Output(component_id="graph", component_property="figure"),
     Input(component_id="graph-selector", component_property="value"),
 )
-def update_histogram(selected_value):
+def update_graph(selected_value):
     if selected_value == "pm10_concentration":
         title = "mean PM10 value over the years"
     elif selected_value == "pm25_concentration":
