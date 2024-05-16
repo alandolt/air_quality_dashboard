@@ -5,17 +5,20 @@ import dash
 from dash import html, Input, Output, callback, dcc
 import pandas as pd
 import numpy as np
+import plotly
 import plotly.express as px
 from air_quality_dashboard.data_parser import who_data
 
+# register page for navigation selection
 dash.register_page(__name__, path="/whodata", name="Plots WHO data")
+plotly.io.templates.default = "plotly_white"
 
 
 ITEMS_PER_PAGE = 10  # set the number of elements per page
+# init instance whodata class, to have access to stored data
 whodata = who_data.WHOData()
 
 # Filter the countries and years for the dropdown menu
-# filtered_countries = whodata.df.drop_duplicates(subset="country_name")
 filter_years = whodata.df.drop_duplicates(subset="year").sort_values(by="year")
 filtered_countries = whodata.df.drop_duplicates(subset="country_name").sort_values(
     by="country_name"
@@ -136,18 +139,20 @@ def update_bar_max(countries, year_1, year_2):
     """
 
     country_list = countries
-    if isinstance(countries, str):
+    if isinstance(
+        countries, str
+    ):  # if only one country is selected, dash returns a string,
+        #  which can't be used for the compairson, hence convert it to a list.
         country_list = list(countries)
 
-    print(type(country_list))
-    print(country_list)
-    # country_list = [country_1, country_2, country_3]
+    # filter the dataframe for the year + country
     df = whodata.df[
         (whodata.df["year"] >= year_1)
         & (whodata.df["year"] <= year_2)
         & (whodata.df["country_name"].isin(country_list))
     ]
 
+    # create a new dataframe with only max values
     df_max = (
         df.groupby("country_name")[
             ["pm10_concentration", "pm25_concentration", "no2_concentration"]
@@ -155,11 +160,15 @@ def update_bar_max(countries, year_1, year_2):
         .max()
         .reset_index()
     )
+
+    # convert from wide to long datafromat
     df_max = pd.melt(
         df_max,
         id_vars=["country_name"],
         value_vars=["pm10_concentration", "pm25_concentration", "no2_concentration"],
     )
+
+    # add when the observation of the max value had been made
     df_max.loc[df_max["variable"] == "pm10_concentration", "year"] = df.loc[
         df.groupby("country_name")["pm10_concentration"].idxmax(), "year_int"
     ].values
@@ -170,6 +179,7 @@ def update_bar_max(countries, year_1, year_2):
         df.groupby("country_name")["no2_concentration"].idxmax(), "year_int"
     ].values
 
+    # for hoover overlay, we need a customdata list with the year + value
     customdata = np.stack((df_max["value"], df_max["year"]), axis=-1)
     df_max = df_max.replace(
         to_replace={
@@ -179,6 +189,7 @@ def update_bar_max(countries, year_1, year_2):
         }
     )
 
+    # convert float year to int, if not possible, as it does not exist (Nan), print NA
     try:
         year_min_str = str(int(df["year_int"].min()))
         year_max_str = str(int(df["year_int"].max()))
@@ -186,6 +197,8 @@ def update_bar_max(countries, year_1, year_2):
         year_min_str = "NA"
         year_max_str = "NA"
 
+    # add a barplot (using histogram element from plotly express, as it enables us to use more
+    # finetuning parameters)
     fig = px.histogram(
         data_frame=df_max,
         x="country_name",
@@ -193,12 +206,15 @@ def update_bar_max(countries, year_1, year_2):
         color="variable",
         barmode="group",
         title=f"Air quality data from {year_min_str} to {year_max_str}",
+        color_discrete_sequence=px.colors.qualitative.D3,
     )
+    # change axe labeling and legend
     fig.update_layout(
         xaxis_title="Country",
         yaxis_title="Max concentration [ug/m<sup>3</sup>]",
         legend_title_text="Polluant",
     )
+    # add hoover traces
     fig.update_traces(
         customdata=customdata,
         hovertemplate="<b>Concentration:</b> %{y} ug/m<sup>3</sup><br> <b>Year of max. data:</b> %{customdata[1]} <extra></extra>",
