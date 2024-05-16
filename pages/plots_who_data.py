@@ -135,6 +135,31 @@ def update_bar_max(countries, year_1, year_2):
         & (whodata.df["country_name"].isin(country_list))
     ]
 
+    # test if for the chosen combination of polluant, and timespan one of the polluant
+    # data is not available, if yes, print no matching data found.
+    # algorithme however could be improved, here it serves as a proof of concept.
+    if (
+        df[["pm10_concentration", "pm25_concentration", "no2_concentration"]]
+        .isnull()
+        .all()
+        .any()
+    ):
+        return {
+            "layout": {
+                "xaxis": {"visible": False},
+                "yaxis": {"visible": False},
+                "annotations": [
+                    {
+                        "text": "No matching data found",
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {"size": 28},
+                    }
+                ],
+            }
+        }
+
     # create a new dataframe with only max values
     df_max = (
         df.groupby("country_name")[

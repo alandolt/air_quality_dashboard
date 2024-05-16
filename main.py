@@ -29,7 +29,7 @@ def main():
         ]
     )
 
-    app.run_server(debug=True, port=8081)
+    app.run_server(debug=False, port=8081)
 
 
 if __name__ == "__main__":
