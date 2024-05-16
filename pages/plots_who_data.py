@@ -89,23 +89,6 @@ layout = html.Div(
         dcc.Graph(id="bar-max"),
         # Selection with buttons for different concentrations for bar plotting
         html.H2(
-            "See mean values in function of the region and concentration (just for fun)"
-        ),
-        dcc.RadioItems(
-            id="bar-selector",
-            options=[
-                {"label": "PM10", "value": "pm10_concentration"},
-                {"label": "PM25", "value": "pm25_concentration"},
-                {"label": "NO2", "value": "no2_concentration"},
-                {"label": "PM10 Coverage", "value": "pm10_tempcov"},
-                {"label": "PM25 Coverage", "value": "pm25_tempcov"},
-                {"label": "NO2 Coverage", "value": "no2_tempcov"},
-            ],
-            value="pm10_concentration",
-            labelStyle={"display": "inline-block"},
-        ),
-        dcc.Graph(id="bar-graph"),
-        html.H2(
             "See mean concentration of all countries over the years (just for fun)"
         ),
         # Selection with dropdown menu for different concentrations for graph plotting
@@ -218,46 +201,6 @@ def update_bar_max(countries, year_1, year_2):
     fig.update_traces(
         customdata=customdata,
         hovertemplate="<b>Concentration:</b> %{y} ug/m<sup>3</sup><br> <b>Year of max. data:</b> %{customdata[1]} <extra></extra>",
-    )
-
-    return fig
-
-
-@callback(
-    Output(component_id="histogram-graph", component_property="figure"),
-    Input(component_id="histogram-selector", component_property="value"),
-)
-def update_histogramm(selected_value):
-    """
-    Histogramm which presents different values in function of the region
-    """
-    if selected_value == "pm10_concentration":
-        title = "mean PM10 value over the years"
-    elif selected_value == "pm25_concentration":
-        title = "mean PM25 value over the years"
-    elif selected_value == "no2_concentration":
-        title = "mean NO2 value over the years"
-    elif selected_value == "pm10_tempcov":
-        title = "mean PM10 Coverage over the years"
-    elif selected_value == "pm25_tempcov":
-        title = "mean PM25 Coverage over the years"
-    else:
-        title = "mean NO2 Coverage over the years"
-
-    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.replace(
-        ",", " "
-    )
-    whodata.df["type_of_stations"] = whodata.df["type_of_stations"].str.split().str[0]
-
-    df_pivot = whodata.df.pivot_table(
-        index="type_of_stations", values=selected_value, aggfunc="mean"
-    )
-    fig = px.histogram(
-        df_pivot,
-        x=df_pivot.index,
-        y=df_pivot[selected_value],
-        labels={"x": "Type of Station", "y": selected_value},
-        title=title,
     )
 
     return fig
