@@ -15,10 +15,14 @@ ITEMS_PER_PAGE = 10  # set the number of elements per page
 whodata = who_data.WHOData()
 
 # Filter the countries and years for the dropdown menu
-filtered_countries = whodata.df.drop_duplicates(subset="country_name")
+# filtered_countries = whodata.df.drop_duplicates(subset="country_name")
 filter_years = whodata.df.drop_duplicates(subset="year").sort_values(by="year")
+filtered_countries = whodata.df.drop_duplicates(subset="country_name").sort_values(
+    by="country_name"
+)
 
-dropdown_style = {"width": "200px"}
+dropdown_style_year = {"width": "200px"}
+dropdown_style_country = {"width": "600px"}
 
 layout = html.Div(
     [
@@ -38,7 +42,7 @@ layout = html.Div(
                         for index, row_year in filter_years.iterrows()
                     ],
                     value=filter_years["year"].iloc[0],
-                    style=dropdown_style,
+                    style=dropdown_style_year,
                 ),
             ],
             style={"display": "inline-block"},
@@ -53,7 +57,7 @@ layout = html.Div(
                         for index, row_year in filter_years.iterrows()
                     ],
                     value=filter_years["year"].iloc[1],
-                    style=dropdown_style,
+                    style=dropdown_style_year,
                 ),
             ],
             style={"display": "inline-block"},
@@ -61,36 +65,19 @@ layout = html.Div(
         # Dropdown menu for countrys
         html.Div(
             [
-                html.H5("Country 1"),
+                html.H5("Country"),
                 dcc.Dropdown(
-                    id="country-1",
-                    options=sorted(filtered_countries["country_name"]),
-                    value=filtered_countries["country_name"].iloc[0],
-                    style=dropdown_style,
-                ),
-            ],
-            style={"display": "inline-block"},
-        ),
-        html.Div(
-            [
-                html.H5("Country 2"),
-                dcc.Dropdown(
-                    id="country-2",
-                    options=sorted(filtered_countries["country_name"]),
-                    value=filtered_countries["country_name"].iloc[0],
-                    style=dropdown_style,
-                ),
-            ],
-            style={"display": "inline-block"},
-        ),
-        html.Div(
-            [
-                html.H5("Country 3"),
-                dcc.Dropdown(
-                    id="country-3",
-                    options=sorted(filtered_countries["country_name"]),
-                    value=filtered_countries["country_name"].iloc[0],
-                    style=dropdown_style,
+                    id="countries",
+                    options=[
+                        {
+                            "label": row_country["country_name"],
+                            "value": row_country["country_name"],
+                        }
+                        for index, row_country in filtered_countries.iterrows()
+                    ],
+                    value=["Switzerland", "Spain", "Norway"],
+                    style=dropdown_style_country,
+                    multi=True,
                 ),
             ],
             style={"display": "inline-block"},
@@ -138,18 +125,23 @@ layout = html.Div(
 
 @callback(
     Output(component_id="bar-max", component_property="figure"),
-    Input(component_id="country-1", component_property="value"),
-    Input(component_id="country-2", component_property="value"),
-    Input(component_id="country-3", component_property="value"),
+    Input(component_id="countries", component_property="value"),
     Input(component_id="year-1", component_property="value"),
     Input(component_id="year-2", component_property="value"),
 )
-def update_bar_max(country_1, country_2, country_3, year_1, year_2):
+def update_bar_max(countries, year_1, year_2):
     """
     Barplot which presents the max values in function of the country
 
     """
-    country_list = [country_1, country_2, country_3]
+
+    country_list = countries
+    if isinstance(countries, str):
+        country_list = list(countries)
+
+    print(type(country_list))
+    print(country_list)
+    # country_list = [country_1, country_2, country_3]
     df = whodata.df[
         (whodata.df["year"] >= year_1)
         & (whodata.df["year"] <= year_2)
@@ -187,8 +179,13 @@ def update_bar_max(country_1, country_2, country_3, year_1, year_2):
         }
     )
 
-    year_min_str = str(int(df["year_int"].min()))
-    year_max_str = str(int(df["year_int"].max()))
+    try:
+        year_min_str = str(int(df["year_int"].min()))
+        year_max_str = str(int(df["year_int"].max()))
+    except ValueError:
+        year_min_str = "NA"
+        year_max_str = "NA"
+
     fig = px.histogram(
         data_frame=df_max,
         x="country_name",
