@@ -3,6 +3,8 @@
 
 import dash
 from dash import html, Input, Output, callback, dcc
+import pandas as pd
+import numpy as np
 import plotly.express as px
 from air_quality_dashboard.data_parser import who_data
 
@@ -14,7 +16,7 @@ whodata = who_data.WHOData()
 
 # Filter the countries and years for the dropdown menu
 filtered_countries = whodata.df.drop_duplicates(subset="country_name")
-filtered_years = whodata.df.drop_duplicates(subset="year")
+filter_years = whodata.df.drop_duplicates(subset="year").sort_values(by="year")
 
 dropdown_style = {"width": "200px"}
 
@@ -24,15 +26,18 @@ layout = html.Div(
         # Dropdown menus to chose different countries and their corresponding max_value in a certain timespan
         # Dropdown menus for years
         html.H2(
-            "See max values in function of the country, timespan and concentration"
+            "See max values in function of the country, timespan and concentration (Task2)"
         ),
         html.Div(
             [
                 html.H5("Year 1"),
                 dcc.Dropdown(
                     id="year-1",
-                    options=sorted(filtered_years["year"]),
-                    value=filtered_years["year"].iloc[0],
+                    options=[
+                        {"label": row_year["year_int"], "value": row_year["year"]}
+                        for index, row_year in filter_years.iterrows()
+                    ],
+                    value=filter_years["year"].iloc[0],
                     style=dropdown_style,
                 ),
             ],
@@ -43,8 +48,11 @@ layout = html.Div(
                 html.H5("Year 2"),
                 dcc.Dropdown(
                     id="year-2",
-                    options=sorted(filtered_years["year"]),
-                    value=filtered_years["year"].iloc[0],
+                    options=[
+                        {"label": row_year["year_int"], "value": row_year["year"]}
+                        for index, row_year in filter_years.iterrows()
+                    ],
+                    value=filter_years["year"].iloc[1],
                     style=dropdown_style,
                 ),
             ],
@@ -87,9 +95,14 @@ layout = html.Div(
             ],
             style={"display": "inline-block"},
         ),
-        html.Br(),  # don't work, no space is made
+        # Put a Bar Plot for the max values
+        dcc.Graph(id="bar-max"),
+        # Selection with buttons for different concentrations for bar plotting
+        html.H2(
+            "See mean values in function of the region and concentration (just for fun)"
+        ),
         dcc.RadioItems(
-            id="histogram-max-selector",
+            id="bar-selector",
             options=[
                 {"label": "PM10", "value": "pm10_concentration"},
                 {"label": "PM25", "value": "pm25_concentration"},
@@ -101,25 +114,10 @@ layout = html.Div(
             value="pm10_concentration",
             labelStyle={"display": "inline-block"},
         ),
-        # Put a histogramm for the max values
-        dcc.Graph(id="histogram-max"),
-        # Selection with buttons for different concentrations for histogram plotting
-        html.H2("See mean values in function of the region and concentration"),
-        dcc.RadioItems(
-            id="histogram-selector",
-            options=[
-                {"label": "PM10", "value": "pm10_concentration"},
-                {"label": "PM25", "value": "pm25_concentration"},
-                {"label": "NO2", "value": "no2_concentration"},
-                {"label": "PM10 Coverage", "value": "pm10_tempcov"},
-                {"label": "PM25 Coverage", "value": "pm25_tempcov"},
-                {"label": "NO2 Coverage", "value": "no2_tempcov"},
-            ],
-            value="pm10_concentration",
-            labelStyle={"display": "inline-block"},
+        dcc.Graph(id="bar-graph"),
+        html.H2(
+            "See mean concentration of all countries over the years (just for fun)"
         ),
-        dcc.Graph(id="histogram-graph"),
-        html.H2("See mean concentration of all countries over the years"),
         # Selection with dropdown menu for different concentrations for graph plotting
         dcc.Dropdown(
             id="graph-selector",
@@ -139,46 +137,74 @@ layout = html.Div(
 
 
 @callback(
-    Output(component_id="histogram-max", component_property="figure"),
-    Input(component_id="histogram-max-selector", component_property="value"),
+    Output(component_id="bar-max", component_property="figure"),
     Input(component_id="country-1", component_property="value"),
     Input(component_id="country-2", component_property="value"),
     Input(component_id="country-3", component_property="value"),
     Input(component_id="year-1", component_property="value"),
     Input(component_id="year-2", component_property="value"),
 )
-def update_histogram_max(
-    selected_value, country_1, country_2, country_3, year_1, year_2
-):
+def update_bar_max(country_1, country_2, country_3, year_1, year_2):
     """
-    Histogramm which presents the max values in function of the country
+    Barplot which presents the max values in function of the country
 
     """
-    if selected_value == "pm10_concentration":
-        title = "PM10 Concentration"
-    elif selected_value == "pm25_concentration":
-        title = "PM25 Concentration"
-    elif selected_value == "no2_concentration":
-        title = "NO2 Concentration"
-    elif selected_value == "pm10_tempcov":
-        title = "PM10 Coverage"
-    elif selected_value == "pm25_tempcov":
-        title = "PM25 Coverage"
-    else:
-        title = "NO2 Coverage"
+    country_list = [country_1, country_2, country_3]
+    df = whodata.df[
+        (whodata.df["year"] >= year_1)
+        & (whodata.df["year"] <= year_2)
+        & (whodata.df["country_name"].isin(country_list))
+    ]
 
-    df = whodata.df[(whodata.df["year"] <= year_1) & (whodata.df["year"] <= year_2)]
+    df_max = (
+        df.groupby("country_name")[
+            ["pm10_concentration", "pm25_concentration", "no2_concentration"]
+        ]
+        .max()
+        .reset_index()
+    )
+    df_max = pd.melt(
+        df_max,
+        id_vars=["country_name"],
+        value_vars=["pm10_concentration", "pm25_concentration", "no2_concentration"],
+    )
+    df_max.loc[df_max["variable"] == "pm10_concentration", "year"] = df.loc[
+        df.groupby("country_name")["pm10_concentration"].idxmax(), "year_int"
+    ].values
+    df_max.loc[df_max["variable"] == "pm25_concentration", "year"] = df.loc[
+        df.groupby("country_name")["pm25_concentration"].idxmax(), "year_int"
+    ].values
+    df_max.loc[df_max["variable"] == "no2_concentration", "year"] = df.loc[
+        df.groupby("country_name")["no2_concentration"].idxmax(), "year_int"
+    ].values
 
-    max_country_1 = df[df["country_name"] == country_1][selected_value].max()
-    max_country_2 = df[df["country_name"] == country_2][selected_value].max()
-    max_country_3 = df[df["country_name"] == country_3][selected_value].max()
+    customdata = np.stack((df_max["value"], df_max["year"]), axis=-1)
+    df_max = df_max.replace(
+        to_replace={
+            "pm10_concentration": "PM10",
+            "pm25_concentration": "PM25",
+            "no2_concentration": "NO2",
+        }
+    )
 
+    year_min_str = str(int(df["year_int"].min()))
+    year_max_str = str(int(df["year_int"].max()))
     fig = px.histogram(
-        x=[country_1, country_2, country_3],
-        y=[max_country_1, max_country_2, max_country_3],
-        title=title,
-        labels={"x": "Country", "y": selected_value},
-        color_discrete_sequence=["orange"],
+        data_frame=df_max,
+        x="country_name",
+        y="value",
+        color="variable",
+        barmode="group",
+        title=f"Air quality data from {year_min_str} to {year_max_str}",
+    )
+    fig.update_layout(
+        xaxis_title="Country",
+        yaxis_title="Max concentration [ug/m<sup>3</sup>]",
+        legend_title_text="Polluant",
+    )
+    fig.update_traces(
+        customdata=customdata,
+        hovertemplate="<b>Concentration:</b> %{y} ug/m<sup>3</sup><br> <b>Year of max. data:</b> %{customdata[1]} <extra></extra>",
     )
 
     return fig
