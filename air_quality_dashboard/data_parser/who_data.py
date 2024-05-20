@@ -1,6 +1,7 @@
 """
 Module containing WHOData class to load and update the WHO air quality data.
 """
+
 import io
 import os
 import pandas as pd
@@ -14,6 +15,7 @@ class WHOData:
     """
     Class to load and update the WHO air quality data.
     """
+
     def __init__(self, air_quality_data_url: str = DEFAULT_DATA_URL) -> None:
         self.air_quality_data_url = air_quality_data_url
         self.df = self.get_who_air_quality_data()
@@ -26,16 +28,33 @@ class WHOData:
         Returns:
         pd.DataFrame: the WHO air quality data
         """
-        air_quality_data = requests.get(self.air_quality_data_url, timeout=15)
-        if air_quality_data.status_code == 200:
-            pd_air_quality_data = pd.read_excel(
-                io.BytesIO(air_quality_data.content), "Update 2024 (V6.1)"
-            )
-        else:
-            print(
-                f"Failed to download data. Status code: {air_quality_data.status_code}"
-            )
-            raise Exception("Failed to download data")
+        for _attempt in range(3):
+            if _attempt == 2:
+                print("We tried to download the data 3 times, but failed.")
+                raise SystemError("We tried to download the data 3 times, but failed.")
+            try:
+                air_quality_data = requests.get(self.air_quality_data_url, timeout=15)
+                if air_quality_data.status_code == 200:
+                    pd_air_quality_data = pd.read_excel(
+                        io.BytesIO(air_quality_data.content), "Update 2024 (V6.1)"
+                    )
+            except requests.exceptions.Timeout:
+                print("The request timed out, try again.")
+                continue
+            except requests.exceptions.TooManyRedirects:
+                print("Too many redirects, try again.")
+                continue
+            except pd.errors.ParserError:
+                print("The data file is corrupted, retry.")
+                continue
+            except Exception as e:
+                print(
+                    f"An error occured and we can't continue, as we don't have the WHO data: {e}"
+                )
+                ## stop the execution of the programm
+                raise SystemError(e) from e
+            else:
+                break
 
         # set the correct datatypes
         pd_air_quality_data["who_ms"] = pd_air_quality_data["who_ms"].astype(bool)
@@ -85,11 +104,17 @@ class WHOData:
             return self.load_who_air_quality_data()
         except FileNotFoundError:
             return self.download_who_air_quality_data()
+        except pd.errors.EmptyDataError:
+            print("The data file is empty, start from scratch.")
+            return self.download_who_air_quality_data()
+        except pd.errors.ParserError:
+            print("The data file is corrupted, start from scratch.")
+            return self.download_who_air_quality_data()
 
     def calculate_statistics(self):
         """
         Calculates some statistics for the WHO air quality data.
-        
+
         Returns:
         None
         """

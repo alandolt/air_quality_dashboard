@@ -2,6 +2,7 @@
 Module containing the LocalData class to load and update the 
 local air quality data from the Swiss NABEL database.
 """
+
 import io
 import os
 import requests
@@ -24,7 +25,7 @@ class LocalData:
     ) -> None:
         """
         Initializes the LocalData class with the air quality data URL and the data source name.
-        
+
         Args:
         air_quality_data_url (str): the URL of the air quality data
         data_source_name (str): the name of the data source
@@ -43,13 +44,26 @@ class LocalData:
         """
 
         try:
-            if os.path.exists(self.data_location):
-                self.df = pd.read_pickle(self.data_location)
-            else:
-                self.df = None
-            self.update_local_air_quality_data()
-        except Exception as e:
-            print(f"Failed to load air quality data: {e}")
+            self.df = pd.read_pickle(self.data_location)
+        except FileNotFoundError:
+            print("The data file does not exist, create a new data file.")
+            self.df = None
+        except pd.errors.EmptyDataError:
+            print("The data file is empty, start from scratch.")
+            self.df = None
+        except pd.errors.ParserError:
+            print("The data file is corrupted, start from scratch.")
+            self.df = None
+        finally:
+            try:
+                self.update_local_air_quality_data()
+            except requests.exceptions.Timeout:
+                print("Request timed out, maybe you're blocked from the site")
+            except requests.exceptions.TooManyRedirects:
+                print("Too many redirects, is the URL correct?")
+            except requests.exceptions.RequestException as e:
+                print(f"Something went really wrong: {e}")
+                raise SystemExit(e) from e  # stop the execution of the program
 
     def update_local_air_quality_data(self):
         """
