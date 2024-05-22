@@ -3,10 +3,12 @@
 
 import dash
 from dash import html, Input, Output, callback, dcc
+import copy
 import pandas as pd
 import numpy as np
 import plotly
 import plotly.express as px
+import plotly.graph_objects as go
 from air_quality_dashboard.data_parser import who_data
 
 # register page for navigation selection
@@ -24,8 +26,19 @@ filtered_countries = whodata.df.drop_duplicates(subset="country_name").sort_valu
     by="country_name"
 )
 
+# Filter first string of type of stations for easier manipulation
+dff = whodata.df
+
+dff["type_of_stations"] = dff["type_of_stations"].str.replace(",", " ")
+dff["type_of_stations"] = dff["type_of_stations"].str.split().str[0]
+filtered_stations = dff.drop_duplicates(subset="type_of_stations").sort_values(
+    by="type_of_stations"
+)
+
 dropdown_style_year = {"width": "200px"}
 dropdown_style_country = {"width": "600px"}
+dropdown_style_station = {"width": "600px"}
+dropdown_style_concentration = {"width": "200px"}
 
 layout = html.Div(
     [
@@ -87,7 +100,74 @@ layout = html.Div(
         ),
         # Put a Bar Plot for the max values
         dcc.Graph(id="bar-max"),
-        # Selection with buttons for different concentrations for bar plotting
+        # Begin layout for the globe representation
+        html.H2(
+            "See a 3D representation on a globe in function of the different concentrations."
+        ),
+        # Put maybe a small explanation about the simulation
+        html.Div(
+            [
+                html.H5("Concentration"),
+                dcc.Dropdown(
+                    id="concentration-selector",
+                    options=[
+                        {"label": "PM10", "value": "pm10_concentration"},
+                        {"label": "PM25", "value": "pm25_concentration"},
+                        {"label": "NO2", "value": "no2_concentration"},
+                    ],
+                    value="pm10_concentration",
+                    style=dropdown_style_concentration,
+                ),
+            ],
+            style={"display": "inline-block"},
+        ),
+        # Dropdown menu for type of stations
+        html.Div(
+            [
+                html.H5("Type of station"),
+                dcc.Dropdown(
+                    id="station",
+                    options=[
+                        {
+                            "label": row_stations["type_of_stations"],
+                            "value": row_stations["type_of_stations"],
+                        }
+                        for index, row_stations in filtered_stations.iterrows()
+                    ],
+                    value=None,
+                    style=dropdown_style_station,
+                ),
+            ],
+            style={"display": "inline-block"},
+        ),
+        # Dropdown menu for the country to zoom in.
+        html.Div(
+            [
+                html.H5("Country to center"),
+                dcc.Dropdown(
+                    id="country",
+                    options=[
+                        {
+                            "label": row_country["country_name"],
+                            "value": row_country["country_name"],
+                        }
+                        for index, row_country in filtered_countries.iterrows()
+                    ],
+                    value=None,
+                    style=dropdown_style_country,
+                ),
+            ],
+            style={"display": "inline-block"},
+        ),
+        html.Div(
+            dcc.Graph(id="globe"),
+            style={
+                "display": "flex",
+                "justify-content": "center",
+                "align-items": "center",
+            },
+        ),
+        # Begin of Layout for Boxplot and points over year
         html.H2(
             "See mean concentration of all countries over the years (just for fun)"
         ),
@@ -98,9 +178,6 @@ layout = html.Div(
                 {"label": "PM10", "value": "pm10_concentration"},
                 {"label": "PM25", "value": "pm25_concentration"},
                 {"label": "NO2", "value": "no2_concentration"},
-                {"label": "PM10 Coverage", "value": "pm10_tempcov"},
-                {"label": "PM25 Coverage", "value": "pm25_tempcov"},
-                {"label": "NO2 Coverage", "value": "no2_tempcov"},
             ],
             value="pm10_concentration",
         ),
@@ -187,7 +264,7 @@ def update_bar_max(countries, year_1, year_2):
         df.groupby("country_name")["no2_concentration"].idxmax(), "year_int"
     ].values
 
-    # for hoover overlay, we need a customdata list with the year + value
+    # for hoover overlay, we need a customdata list with the year + value + type of stations
     customdata = np.stack((df_max["value"], df_max["year"]), axis=-1)
     df_max = df_max.replace(
         to_replace={
@@ -231,23 +308,325 @@ def update_bar_max(countries, year_1, year_2):
     return fig
 
 
+# Dynamic callback to filter out if there is a station avialbe for a country or not
+# https://dash-example-index.herokuapp.com/dynamic-callback
+
+
+@callback(
+    Output("station", "options"),
+    Input("country", "value"),
+    Input("concentration-selector", "value"),
+)
+
+# function to filter out the stations in function of the countries
+
+
+def chained_callback_station(country, concentration):
+    dff = copy.deepcopy(whodata.df)
+    if country is not None:
+        dff = dff[dff["country_name"] == country]
+        dff.dropna(subset=["type_of_stations"], inplace=True)
+        dff.dropna(subset=[concentration], inplace=True)
+    # Convert all station types to strings
+    station_types = dff["type_of_stations"].astype(str).unique()
+    return [{"label": station, "value": station} for station in sorted(station_types)]
+
+
+@callback(
+    Output("country", "options"),
+    Input("station", "value"),
+    Input("concentration-selector", "value"),
+)
+
+# function to filter out the countries in function of the stations
+
+
+def chained_callback_country(station, concentration):
+    dff = copy.deepcopy(whodata.df)
+    if station is not None:
+        dff = dff[dff["type_of_stations"] == station]
+        dff.dropna(subset=["country_name"], inplace=True)
+        dff.dropna(subset=[concentration], inplace=True)
+    # Convert all country names to strings (made some problems if not)
+    country_names = dff["country_name"].astype(str).unique()
+    return [{"label": country, "value": country} for country in sorted(country_names)]
+
+
+# Here is where the magic is made
+
+
+@callback(
+    Output(component_id="globe", component_property="figure"),
+    Input(component_id="country", component_property="value"),
+    Input(component_id="station", component_property="value"),
+    Input(component_id="concentration-selector", component_property="value"),
+)
+
+# representation of a globe, different configurations are made in function of the inputs
+
+
+def globe_representation(country_to_zoom, station, concentration):
+    dff = whodata.df
+
+    # If there is no concentration chosen, there is a simple globe represented
+    if concentration is None:
+        fig = px.scatter_geo(
+            pd.DataFrame({"latitude": [], "longitude": []}),
+            lat="latitude",
+            lon="longitude",
+            projection="orthographic",
+        )
+        # Update colors and globe
+        fig.update_geos(
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="LightGrey",
+            showcountries=True,
+            countrycolor="Black",
+            showocean=True,
+            oceancolor="LightBlue",
+            showlakes=True,
+            lakecolor="LightBlue",
+            showrivers=True,
+            rivercolor="Blue",
+        )
+        fig.update_layout(
+            title="3D globe",
+            width=1000,
+            height=800,
+        )
+    else:
+
+        # sort years for the bar and drop Nan values of concentration for further processing
+        dff = dff.sort_values(by="year_int", ascending=True)
+        dff.dropna(subset=[concentration], inplace=True)
+
+    # plot the concentrations without centering and specify station on the 3D globe
+    if (country_to_zoom is None) and (station is None) and (concentration is not None):
+        # plot points by their size and color in function of the concentration
+        fig = px.scatter_geo(
+            dff,
+            lat="latitude",
+            lon="longitude",
+            size=concentration,
+            color=concentration,
+            animation_frame="year_int",
+            projection="orthographic",
+            color_continuous_scale="Viridis",
+        )
+
+        # Update colors and globe
+        fig.update_geos(
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="LightGrey",
+            showcountries=True,
+            countrycolor="Black",
+            showocean=True,
+            oceancolor="LightBlue",
+            showlakes=True,
+            lakecolor="LightBlue",
+            showrivers=True,
+            rivercolor="Blue",
+        )
+        fig.update_layout(
+            title=f"{concentration} over the years on a 3D globe",
+            width=1000,
+            height=800,
+        )
+
+    # show globe with concentration over all stations focused on one country
+    elif (
+        (country_to_zoom is not None)
+        and (station is None)
+        and (concentration is not None)
+    ):
+
+        # get coordinates to zoom the on the map the country of interest
+        index = dff[dff["country_name"] == str(country_to_zoom)].index
+        # Get the latitude and longitude coordinates of the first row (by default)
+
+        coordinates = dff.loc[index[0], ["latitude", "longitude"]]
+
+        center_lat = coordinates["latitude"]
+        center_lon = coordinates["longitude"]
+
+        # plot points by their size and color in function of the concentration
+        fig = px.scatter_geo(
+            dff,
+            lat="latitude",
+            lon="longitude",
+            size=concentration,
+            color=concentration,
+            animation_frame="year_int",
+            projection="orthographic",
+            color_continuous_scale="Viridis",
+        )
+
+        # Update colors and globe and center on wished country
+        fig.update_geos(
+            center=dict(lat=center_lat, lon=center_lon),
+            projection_scale=10,
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="LightGrey",
+            showcountries=True,
+            countrycolor="Black",
+            showocean=True,
+            oceancolor="LightBlue",
+            showlakes=True,
+            lakecolor="LightBlue",
+            showrivers=True,
+            rivercolor="Blue",
+        )
+
+        # Contour the chosed country in red
+        fig.add_trace(
+            go.Choropleth(
+                locations=[country_to_zoom],
+                locationmode="country names",
+                z=[0],  # Dummy variable for color scale
+                colorscale=[[0, "LightGrey"], [1, "LightGrey"]],
+                showscale=False,
+                marker=dict(line=dict(width=2, color="red")),
+            )
+        )
+
+        fig.update_layout(
+            title=f"{concentration} over the years on a centered on {country_to_zoom}",
+            width=1000,
+            height=800,
+        )
+
+    # show globe with station and concentration without to zoom on a country
+    elif (
+        (country_to_zoom is None)
+        and (station is not None)
+        and (concentration is not None)
+    ):
+
+        dff = dff[dff["type_of_stations"] == str(station)]
+
+        fig = px.scatter_geo(
+            dff,
+            lat="latitude",
+            lon="longitude",
+            size=concentration,
+            color=concentration,
+            animation_frame="year_int",
+            projection="orthographic",
+            color_continuous_scale="Viridis",
+        )
+
+        # Update colors and globe
+        fig.update_geos(
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="LightGrey",
+            showcountries=True,
+            countrycolor="Black",
+            showocean=True,
+            oceancolor="LightBlue",
+            showlakes=True,
+            lakecolor="LightBlue",
+            showrivers=True,
+            rivercolor="Blue",
+        )
+        fig.update_layout(
+            title=f"{concentration} on {station} station over the years on a 3D globe",
+            width=1000,
+            height=800,
+        )
+
+    # show globe when every input is chosen
+    elif (
+        (country_to_zoom is not None)
+        and (station is not None)
+        and (concentration is not None)
+    ):
+
+        # get coordinates to zoom the on the map the country of interest
+        index = dff[dff["country_name"] == str(country_to_zoom)].index
+        # Get the latitude and longitude coordinates of the first row (by default)
+
+        coordinates = dff.loc[index[0], ["latitude", "longitude"]]
+
+        dff = dff[dff["type_of_stations"] == str(station)]
+
+        center_lat = coordinates["latitude"]
+        center_lon = coordinates["longitude"]
+
+        # plot points by their size and color in function of the concentration
+        fig = px.scatter_geo(
+            dff,
+            lat="latitude",
+            lon="longitude",
+            size=concentration,
+            color=concentration,
+            animation_frame="year_int",
+            projection="orthographic",
+            color_continuous_scale="Viridis",
+        )
+
+        # Update colors and globe in function of the country to zoom in
+        fig.update_geos(
+            center=dict(lat=center_lat, lon=center_lon),
+            projection_scale=5,
+            showcoastlines=True,
+            coastlinecolor="Black",
+            showland=True,
+            landcolor="LightGrey",
+            showcountries=True,
+            countrycolor="Black",
+            showocean=True,
+            oceancolor="LightBlue",
+            showlakes=True,
+            lakecolor="LightBlue",
+            showrivers=True,
+            rivercolor="Blue",
+        )
+
+        # Contour the chosed country in red
+        fig.add_trace(
+            go.Choropleth(
+                locations=[country_to_zoom],
+                locationmode="country names",
+                z=[0],  # Dummy variable for color scale
+                colorscale=[[0, "LightGrey"], [1, "LightGrey"]],
+                showscale=False,
+                marker=dict(line=dict(width=2, color="red")),
+            )
+        )
+
+        fig.update_layout(
+            title=f"{concentration} on {station} stations over the Years centered on {country_to_zoom} on a 3D Globe",
+            width=1000,
+            height=800,
+        )
+
+    return fig
+
+
 @callback(
     Output(component_id="graph", component_property="figure"),
     Input(component_id="graph-selector", component_property="value"),
 )
+
+# Make scatter with all datas to see the evoluton
+# Also make boxplot
+
+
 def update_graph(selected_value):
     if selected_value == "pm10_concentration":
         title = "mean PM10 value over the years"
     elif selected_value == "pm25_concentration":
         title = "mean PM25 value over the years"
-    elif selected_value == "no2_concentration":
-        title = "mean NO2 value over the years"
-    elif selected_value == "pm10_tempcov":
-        title = "mean PM10 Coverage over the years"
-    elif selected_value == "pm25_tempcov":
-        title = "mean PM25 Coverage over the years"
     else:
-        title = "mean NO2 Coverage over the years"
+        title = "mean NO2 value over the years"
 
     df_pivot = whodata.df.pivot_table(
         index="year", values=selected_value, aggfunc="mean"
