@@ -37,7 +37,7 @@ filtered_stations = dff.drop_duplicates(subset="type_of_stations").sort_values(
 
 dropdown_style_year = {"width": "200px"}
 dropdown_style_country = {"width": "600px"}
-dropdown_style_station = {"width": "600px"}
+dropdown_style_station = {"width": "400px"}
 dropdown_style_concentration = {"width": "200px"}
 
 layout = html.Div(
@@ -101,9 +101,7 @@ layout = html.Div(
         # Put a Bar Plot for the max values
         dcc.Graph(id="bar-max"),
         # Begin layout for the globe representation
-        html.H2(
-            "See a 3D representation on a globe in function of the different concentrations."
-        ),
+        html.H2("See a representation of different concentrations in the world."),
         # Put maybe a small explanation about the simulation
         html.Div(
             [
@@ -195,16 +193,13 @@ layout = html.Div(
 def update_bar_max(countries, year_1, year_2):
     """
     Barplot which presents the max values in function of the country
-
     """
-
     country_list = countries
     if isinstance(
         countries, str
     ):  # if only one country is selected, dash returns a string,
         #  which can't be used for the compairson, hence convert it to a list.
         country_list = list(countries)
-
     # filter the dataframe for the year + country
     df = whodata.df[
         (whodata.df["year"] >= year_1)
@@ -245,14 +240,12 @@ def update_bar_max(countries, year_1, year_2):
         .max()
         .reset_index()
     )
-
     # convert from wide to long datafromat
     df_max = pd.melt(
         df_max,
         id_vars=["country_name"],
         value_vars=["pm10_concentration", "pm25_concentration", "no2_concentration"],
     )
-
     # add when the observation of the max value had been made
     df_max.loc[df_max["variable"] == "pm10_concentration", "year"] = df.loc[
         df.groupby("country_name")["pm10_concentration"].idxmax(), "year_int"
@@ -263,8 +256,7 @@ def update_bar_max(countries, year_1, year_2):
     df_max.loc[df_max["variable"] == "no2_concentration", "year"] = df.loc[
         df.groupby("country_name")["no2_concentration"].idxmax(), "year_int"
     ].values
-
-    # for hoover overlay, we need a customdata list with the year + value + type of stations
+    # for hoover overlay, we need a customdata list with the year + value
     customdata = np.stack((df_max["value"], df_max["year"]), axis=-1)
     df_max = df_max.replace(
         to_replace={
@@ -273,7 +265,6 @@ def update_bar_max(countries, year_1, year_2):
             "no2_concentration": "NO2",
         }
     )
-
     # convert float year to int, if not possible, as it does not exist (Nan), print NA
     try:
         year_min_str = str(int(df["year_int"].min()))
@@ -281,7 +272,6 @@ def update_bar_max(countries, year_1, year_2):
     except ValueError:
         year_min_str = "NA"
         year_max_str = "NA"
-
     # add a barplot (using histogram element from plotly express, as it enables us to use more
     # finetuning parameters)
     fig = px.histogram(
@@ -304,7 +294,6 @@ def update_bar_max(countries, year_1, year_2):
         customdata=customdata,
         hovertemplate="<b>Concentration:</b> %{y} ug/m<sup>3</sup><br> <b>Year of max. data:</b> %{customdata[1]} <extra></extra>",
     )
-
     return fig
 
 
@@ -461,14 +450,14 @@ def globe_representation(country_to_zoom, station, concentration):
             size=concentration,
             color=concentration,
             animation_frame="year_int",
-            projection="orthographic",
+            projection="natural earth",
             color_continuous_scale="Viridis",
         )
 
         # Update colors and globe and center on wished country
         fig.update_geos(
             center=dict(lat=center_lat, lon=center_lon),
-            projection_scale=10,
+            projection_scale=5,
             showcoastlines=True,
             coastlinecolor="Black",
             showland=True,
@@ -496,7 +485,7 @@ def globe_representation(country_to_zoom, station, concentration):
         )
 
         fig.update_layout(
-            title=f"{concentration} over the years on a centered on {country_to_zoom}",
+            title=f"{concentration} over the years centered on {country_to_zoom} on a 2D world map",
             width=1000,
             height=800,
         )
@@ -507,7 +496,7 @@ def globe_representation(country_to_zoom, station, concentration):
         and (station is not None)
         and (concentration is not None)
     ):
-
+        dff.dropna(subset=["type_of_stations"], inplace=True)
         dff = dff[dff["type_of_stations"] == str(station)]
 
         fig = px.scatter_geo(
@@ -555,6 +544,7 @@ def globe_representation(country_to_zoom, station, concentration):
 
         coordinates = dff.loc[index[0], ["latitude", "longitude"]]
 
+        dff.dropna(subset=["type_of_stations"], inplace=True)
         dff = dff[dff["type_of_stations"] == str(station)]
 
         center_lat = coordinates["latitude"]
@@ -568,7 +558,7 @@ def globe_representation(country_to_zoom, station, concentration):
             size=concentration,
             color=concentration,
             animation_frame="year_int",
-            projection="orthographic",
+            projection="natural earth",
             color_continuous_scale="Viridis",
         )
 
@@ -603,7 +593,7 @@ def globe_representation(country_to_zoom, station, concentration):
         )
 
         fig.update_layout(
-            title=f"{concentration} on {station} stations over the Years centered on {country_to_zoom} on a 3D Globe",
+            title=f"{concentration} on {station} stations over the years centered on {country_to_zoom} on a 2D world map",
             width=1000,
             height=800,
         )
