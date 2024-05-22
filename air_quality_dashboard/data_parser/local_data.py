@@ -57,13 +57,21 @@ class LocalData:
         finally:
             try:
                 self.update_local_air_quality_data()
-            except requests.exceptions.Timeout:
+            except requests.exceptions.Timeout as e:
                 print("Request timed out, maybe you're blocked from the site")
-            except requests.exceptions.TooManyRedirects:
+                raise SystemExit(e) from e  # stop the execution of the program
+            except requests.exceptions.TooManyRedirects as e:
                 print("Too many redirects, is the URL correct?")
+                raise SystemExit(e) from e  # stop the execution of the program
             except requests.exceptions.RequestException as e:
                 print(f"Something went really wrong: {e}")
                 raise SystemExit(e) from e  # stop the execution of the program
+            except pd.errors.ParserError as e:
+                print(f"Something went wrong with the data source: {e}")
+                raise SystemExit(e) from e
+            except KeyError as e:
+                print(f"Something went wrong with the data source: {e}")
+                raise SystemExit(e) from e
 
     def update_local_air_quality_data(self):
         """

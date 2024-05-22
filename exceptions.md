@@ -27,7 +27,12 @@ def load_local_air_quality_data(self):
         except requests.exceptions.RequestException as e:
             print(f"Something went really wrong: {e}")
             raise SystemExit(e) from e  # stop the execution of the program
-
+        except pd.errors.ParserError as e:
+            print(f"Something went wrong with the data source: {e}")
+            raise SystemExit(e) from e
+        except KeyError as e:
+            print(f"Something went wrong with the data source: {e}")
+            raise SystemExit(e) from e
 ```
 
 Reasoning: 
@@ -37,8 +42,8 @@ Reasoning:
 - Again, we set this into a try-except block, as the function ```update_local_air_quality_data()``` makes a request to the internet, and hence, we need to catch the most likely errors that can occur when making a request.
 - The timeout exception is the most likely to occur, as the request to the internet can take a long time, and hence, we catch this exception first. A timeout can occur if the internet connection is slow, or if the server is slow to respond.
 - A too many redirects exception can occur if the URL is incorrect, and hence, we catch this exception next.
-- The last exception is a general exception, which catches all other exceptions that can occur when making a request. We print the error message and raise a SystemExit exception, which stops the execution of the program.
-
+- The next exception is a general exception, which catches all other exceptions that can occur when making a request. We print the error message and raise a SystemExit exception, which stops the execution of the program.
+- Regarding the case when the data source could have been downloaded but may be corrupted, we check if there is a parser error or a key error, which can occur if the data source is not in the expected format. We print the error message and raise a SystemExit exception, which stops the execution of the program.
 
 ## Implementation in class WhoData, method get_who_air_quality_data
 ```python
