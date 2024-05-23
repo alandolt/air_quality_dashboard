@@ -319,7 +319,7 @@ def chained_callback_station(country, concentration):
         dff = dff[dff["country_name"] == country]
         dff.dropna(subset=["type_of_stations"], inplace=True)
     # Convert all station types to strings
-    station_types = dff["type_of_stations"].astype(str).dropna().unique()
+    station_types = dff["type_of_stations"].dropna().astype(str).unique()
     return [{"label": station, "value": station} for station in sorted(station_types)]
 
 
@@ -411,10 +411,7 @@ def globe_representation(country_to_zoom, station, concentration):
             rivercolor="Blue",
         )
         fig.update_layout(
-            title=f"{dff_labeling_columns[concentration]} over the years on a 3D globe",
-            width=1000,
-            height=800,
-            sliders=[{"currentvalue": {"prefix": "Year:"}}],
+            title=f"{dff_labeling_columns[concentration]} over the years on a 3D globe"
         )
 
     # show globe with concentration over all stations focused on one country
@@ -478,9 +475,7 @@ def globe_representation(country_to_zoom, station, concentration):
         )
 
         fig.update_layout(
-            title=f"{dff_labeling_columns[concentration]} over the years centered on {country_to_zoom} on a 2D world map",
-            width=1000,
-            height=800,
+            title=f"{dff_labeling_columns[concentration]} over the years centered on {country_to_zoom} on a 2D world map"
         )
 
     # show globe with station and concentration without to zoom on a country
@@ -519,8 +514,6 @@ def globe_representation(country_to_zoom, station, concentration):
         )
         fig.update_layout(
             title=f"{dff_labeling_columns[concentration]} on {station} station over the years on a 3D globe",
-            width=1000,
-            height=800,
         )
 
     # show globe when every input is chosen
@@ -587,10 +580,13 @@ def globe_representation(country_to_zoom, station, concentration):
 
         fig.update_layout(
             title=f"{dff_labeling_columns[concentration]} on {station} stations over the years centered on {country_to_zoom} on a 2D world map",
-            width=1000,
-            height=800,
         )
 
+    fig.update_layout(
+        width=1000,
+        height=800,
+        sliders=[{"currentvalue": {"prefix": "Year: "}}],
+    )
     fig.update_traces(
         customdata=customdata,
         hovertemplate="<b>%{customdata[1]} </b><br>Concentration: %{customdata[0]} ug/m<sup>3</sup><br><extra></extra>",
