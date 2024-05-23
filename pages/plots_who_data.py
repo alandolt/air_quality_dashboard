@@ -34,6 +34,8 @@ dff["type_of_stations"] = dff["type_of_stations"].str.split().str[0]
 filtered_stations = dff.drop_duplicates(subset="type_of_stations").sort_values(
     by="type_of_stations"
 )
+filtered_stations["type_of_stations_str"] = filtered_stations["type_of_stations"]
+filtered_stations.dropna(subset=["type_of_stations"], inplace=True)
 
 dropdown_style_year = {"width": "200px"}
 dropdown_style_country = {"width": "600px"}
@@ -115,6 +117,7 @@ layout = html.Div(
                     ],
                     value="pm10_concentration",
                     style=dropdown_style_concentration,
+                    clearable=False,
                 ),
             ],
             style={"display": "inline-block"},
@@ -127,8 +130,8 @@ layout = html.Div(
                     id="station",
                     options=[
                         {
-                            "label": row_stations["type_of_stations"],
-                            "value": row_stations["type_of_stations"],
+                            "label": row_stations["type_of_stations_str"],
+                            "value": row_stations["type_of_stations_str"],
                         }
                         for index, row_stations in filtered_stations.iterrows()
                     ],
@@ -315,9 +318,8 @@ def chained_callback_station(country, concentration):
     if country is not None:
         dff = dff[dff["country_name"] == country]
         dff.dropna(subset=["type_of_stations"], inplace=True)
-        # dff.dropna(subset=[concentration], inplace=True)
     # Convert all station types to strings
-    station_types = dff["type_of_stations"].astype(str).unique()
+    station_types = dff["type_of_stations"].astype(str).dropna().unique()
     return [{"label": station, "value": station} for station in sorted(station_types)]
 
 
@@ -335,7 +337,6 @@ def chained_callback_country(station, concentration):
     if station is not None:
         dff = dff[dff["type_of_stations"] == station]
         dff.dropna(subset=["country_name"], inplace=True)
-        # dff.dropna(subset=[concentration], inplace=True)
     # Convert all country names to strings (made some problems if not)
     country_names = dff["country_name"].astype(str).unique()
     return [{"label": country, "value": country} for country in sorted(country_names)]
@@ -356,42 +357,18 @@ def chained_callback_country(station, concentration):
 
 def globe_representation(country_to_zoom, station, concentration):
     dff = whodata.df
-    # If there is no concentration chosen, there is a simple globe represented
-    if concentration is None:
-        fig = px.scatter_geo(
-            pd.DataFrame({"latitude": [], "longitude": []}),
-            lat="latitude",
-            lon="longitude",
-            projection="orthographic",
-        )
-        # Update colors and globe
-        fig.update_geos(
-            showcoastlines=True,
-            coastlinecolor="Black",
-            showland=True,
-            landcolor="LightGrey",
-            showcountries=True,
-            countrycolor="Black",
-            showocean=True,
-            oceancolor="LightBlue",
-            showlakes=True,
-            lakecolor="LightBlue",
-            showrivers=True,
-            rivercolor="Blue",
-        )
-        fig.update_layout(
-            title="3D globe",
-            width=1000,
-            height=800,
-        )
-    else:
-
-        # sort years for the bar and drop Nan values of concentration for further processing
-        dff = dff.sort_values(by="year_int", ascending=True)
-        dff.dropna(subset=[concentration], inplace=True)
+    # sort years for the bar and drop Nan values of concentration for further processing
+    dff = dff.sort_values(by="year_int", ascending=True)
+    dff.dropna(subset=[concentration, "year_int"], inplace=True)
+    dff["year_int"] = dff["year_int"].astype(int)
+    dff_labeling_columns = {
+        "pm10_concentration": "PM10",
+        "pm25_concentration": "PM25",
+        "no2_concentration": "NO2",
+    }
 
     # plot the concentrations without centering and specify station on the 3D globe
-    if (country_to_zoom is None) and (station is None) and (concentration is not None):
+    if (country_to_zoom is None) and (station is None):
         # plot points by their size and color in function of the concentration
         fig = px.scatter_geo(
             dff,
@@ -402,6 +379,9 @@ def globe_representation(country_to_zoom, station, concentration):
             animation_frame="year_int",
             projection="orthographic",
             color_continuous_scale="Viridis",
+            labels={
+                concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
+            },
         )
 
         # Update colors and globe
@@ -420,17 +400,14 @@ def globe_representation(country_to_zoom, station, concentration):
             rivercolor="Blue",
         )
         fig.update_layout(
-            title=f"{concentration} over the years on a 3D globe",
+            title=f"{dff_labeling_columns[concentration]} over the years on a 3D globe",
             width=1000,
             height=800,
+            sliders=[{"currentvalue": {"prefix": "Year:"}}],
         )
 
     # show globe with concentration over all stations focused on one country
-    elif (
-        (country_to_zoom is not None)
-        and (station is None)
-        and (concentration is not None)
-    ):
+    elif (country_to_zoom is not None) and (station is None):
 
         # get coordinates to zoom the on the map the country of interest
         index = filtered_countries[
@@ -453,6 +430,9 @@ def globe_representation(country_to_zoom, station, concentration):
             animation_frame="year_int",
             projection="natural earth",
             color_continuous_scale="Viridis",
+            labels={
+                concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
+            },
         )
 
         # Update colors and globe and center on wished country
@@ -486,17 +466,13 @@ def globe_representation(country_to_zoom, station, concentration):
         )
 
         fig.update_layout(
-            title=f"{concentration} over the years centered on {country_to_zoom} on a 2D world map",
+            title=f"{dff_labeling_columns[concentration]} over the years centered on {country_to_zoom} on a 2D world map",
             width=1000,
             height=800,
         )
 
     # show globe with station and concentration without to zoom on a country
-    elif (
-        (country_to_zoom is None)
-        and (station is not None)
-        and (concentration is not None)
-    ):
+    elif (country_to_zoom is None) and (station is not None):
         dff.dropna(subset=["type_of_stations"], inplace=True)
         dff = dff[dff["type_of_stations"] == str(station)]
 
@@ -509,6 +485,9 @@ def globe_representation(country_to_zoom, station, concentration):
             animation_frame="year_int",
             projection="orthographic",
             color_continuous_scale="Viridis",
+            labels={
+                concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
+            },
         )
 
         # Update colors and globe
@@ -527,17 +506,13 @@ def globe_representation(country_to_zoom, station, concentration):
             rivercolor="Blue",
         )
         fig.update_layout(
-            title=f"{concentration} on {station} station over the years on a 3D globe",
+            title=f"{dff_labeling_columns[concentration]} on {station} station over the years on a 3D globe",
             width=1000,
             height=800,
         )
 
     # show globe when every input is chosen
-    elif (
-        (country_to_zoom is not None)
-        and (station is not None)
-        and (concentration is not None)
-    ):
+    elif (country_to_zoom is not None) and (station is not None):
 
         # get coordinates to zoom the on the map the country of interest
         index = filtered_countries[
@@ -563,6 +538,9 @@ def globe_representation(country_to_zoom, station, concentration):
             animation_frame="year_int",
             projection="natural earth",
             color_continuous_scale="Viridis",
+            labels={
+                concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
+            },
         )
 
         # Update colors and globe in function of the country to zoom in
@@ -596,7 +574,7 @@ def globe_representation(country_to_zoom, station, concentration):
         )
 
         fig.update_layout(
-            title=f"{concentration} on {station} stations over the years centered on {country_to_zoom} on a 2D world map",
+            title=f"{dff_labeling_columns[concentration]} on {station} stations over the years centered on {country_to_zoom} on a 2D world map",
             width=1000,
             height=800,
         )
