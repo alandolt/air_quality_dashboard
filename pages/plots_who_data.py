@@ -366,6 +366,16 @@ def globe_representation(country_to_zoom, station, concentration):
         "pm25_concentration": "PM25",
         "no2_concentration": "NO2",
     }
+    range_min_value = dff[concentration].quantile(0.05)
+    range_max_value = dff[concentration].quantile(0.95)
+    dff["point_size"] = dff[concentration].clip(range_min_value, range_max_value)
+    customdata = np.stack(
+        (
+            dff[concentration],
+            dff["city"],
+        ),
+        axis=-1,
+    )
 
     # plot the concentrations without centering and specify station on the 3D globe
     if (country_to_zoom is None) and (station is None):
@@ -374,11 +384,12 @@ def globe_representation(country_to_zoom, station, concentration):
             dff,
             lat="latitude",
             lon="longitude",
-            size=concentration,
+            size="point_size",
             color=concentration,
             animation_frame="year_int",
             projection="orthographic",
             color_continuous_scale="Viridis",
+            range_color=[range_min_value, range_max_value],
             labels={
                 concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
             },
@@ -425,11 +436,12 @@ def globe_representation(country_to_zoom, station, concentration):
             dff,
             lat="latitude",
             lon="longitude",
-            size=concentration,
+            size="point_size",
             color=concentration,
             animation_frame="year_int",
             projection="natural earth",
             color_continuous_scale="Viridis",
+            range_color=[range_min_value, range_max_value],
             labels={
                 concentration: f"{dff_labeling_columns[concentration]} [ug/m<sup>3</sup>] "
             },
@@ -480,7 +492,7 @@ def globe_representation(country_to_zoom, station, concentration):
             dff,
             lat="latitude",
             lon="longitude",
-            size=concentration,
+            size="point_size",
             color=concentration,
             animation_frame="year_int",
             projection="orthographic",
@@ -533,7 +545,7 @@ def globe_representation(country_to_zoom, station, concentration):
             dff,
             lat="latitude",
             lon="longitude",
-            size=concentration,
+            size="point_size",
             color=concentration,
             animation_frame="year_int",
             projection="natural earth",
@@ -579,6 +591,10 @@ def globe_representation(country_to_zoom, station, concentration):
             height=800,
         )
 
+    fig.update_traces(
+        customdata=customdata,
+        hovertemplate="<b>%{customdata[1]} </b><br>Concentration: %{customdata[0]} ug/m<sup>3</sup><br><extra></extra>",
+    )
     return fig
 
 
