@@ -315,7 +315,7 @@ def chained_callback_station(country, concentration):
     if country is not None:
         dff = dff[dff["country_name"] == country]
         dff.dropna(subset=["type_of_stations"], inplace=True)
-        dff.dropna(subset=[concentration], inplace=True)
+        # dff.dropna(subset=[concentration], inplace=True)
     # Convert all station types to strings
     station_types = dff["type_of_stations"].astype(str).unique()
     return [{"label": station, "value": station} for station in sorted(station_types)]
@@ -335,7 +335,7 @@ def chained_callback_country(station, concentration):
     if station is not None:
         dff = dff[dff["type_of_stations"] == station]
         dff.dropna(subset=["country_name"], inplace=True)
-        dff.dropna(subset=[concentration], inplace=True)
+        # dff.dropna(subset=[concentration], inplace=True)
     # Convert all country names to strings (made some problems if not)
     country_names = dff["country_name"].astype(str).unique()
     return [{"label": country, "value": country} for country in sorted(country_names)]
@@ -356,7 +356,6 @@ def chained_callback_country(station, concentration):
 
 def globe_representation(country_to_zoom, station, concentration):
     dff = whodata.df
-
     # If there is no concentration chosen, there is a simple globe represented
     if concentration is None:
         fig = px.scatter_geo(
@@ -434,10 +433,12 @@ def globe_representation(country_to_zoom, station, concentration):
     ):
 
         # get coordinates to zoom the on the map the country of interest
-        index = dff[dff["country_name"] == str(country_to_zoom)].index
+        index = filtered_countries[
+            filtered_countries["country_name"] == str(country_to_zoom)
+        ].index
         # Get the latitude and longitude coordinates of the first row (by default)
 
-        coordinates = dff.loc[index[0], ["latitude", "longitude"]]
+        coordinates = filtered_countries.loc[index[0], ["latitude", "longitude"]]
 
         center_lat = coordinates["latitude"]
         center_lon = coordinates["longitude"]
@@ -539,10 +540,12 @@ def globe_representation(country_to_zoom, station, concentration):
     ):
 
         # get coordinates to zoom the on the map the country of interest
-        index = dff[dff["country_name"] == str(country_to_zoom)].index
+        index = filtered_countries[
+            filtered_countries["country_name"] == str(country_to_zoom)
+        ].index
         # Get the latitude and longitude coordinates of the first row (by default)
 
-        coordinates = dff.loc[index[0], ["latitude", "longitude"]]
+        coordinates = filtered_countries.loc[index[0], ["latitude", "longitude"]]
 
         dff.dropna(subset=["type_of_stations"], inplace=True)
         dff = dff[dff["type_of_stations"] == str(station)]
