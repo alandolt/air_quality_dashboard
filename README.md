@@ -8,7 +8,7 @@ As this repository is part of a group project in an university course dedicated 
 To install the required packages, clone this repository. Then create a new environment in Conda / Mamba by running the following command: 
     
 ```
-conda env create --file requirements.yml 
+conda env create --file environment.yml 
 ```
 
 Activate the environment by running: 
@@ -25,7 +25,7 @@ To run the dashboard locally, run the following command in the terminal:
 python main.py
 ```
 
-The dashboard will then be available at `http://127.0.0.1:8080/` in your browser.
+The dashboard will then be available at `http://127.0.0.1:8081/` in your browser.
 
 ## Progress
 - *0.0.1*: Data can be imported from WHO, as well as from a local source (Switzerland -> NABEL database). Summary statistics, like how many entries are present, when the NABEL database got last updated, etc. are displayed in the dashboard.
