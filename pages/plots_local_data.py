@@ -38,8 +38,10 @@ for location in filtered_location["Location"]:
 
 geocoded_df = pd.DataFrame(geocoded_data)
 
-df["timestamp"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d")
-filter_date = df.drop_duplicates(subset="timestamp").sort_values(by="timestamp")
+
+df["date"] = df["timestamp"].dt.date
+filter_date = df.drop_duplicates(subset="date").sort_values(by="date")
+
 
 dropdown_style_date = {"width": "400px"}
 dropdown_style_concentration = {"width": "200px"}
