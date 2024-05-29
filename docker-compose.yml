@@ -1,5 +1,7 @@
 services:
   air_quality_dashboard:
+    network_mode: host # Bugfix for Windows when using Docker Desktop, 
+                       #remove this line if you are using Linux  
     container_name: air_quality_dashboard
     image: alandolt/air_quality_dashboard
     build:
