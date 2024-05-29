@@ -59,6 +59,7 @@ layout = html.Div(
                     ],
                     value=filter_date["timestamp"].iloc[0],
                     style=dropdown_style_date,
+                    clearable=False,
                 ),
             ],
             style={"display": "inline-block"},
