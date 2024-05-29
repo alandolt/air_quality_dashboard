@@ -102,7 +102,6 @@ def switzerland_concentrations(date, concentration):
     dff = df[df["timestamp"] == date]
     dff = dff.groupby(["Location"]).mean(numeric_only=True).reset_index()
     merged_df = pd.merge(dff, geocoded_df, on="Location")
-    print(merged_df)
 
     fig = px.scatter_mapbox(
         merged_df,
